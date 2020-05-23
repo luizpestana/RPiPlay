@@ -311,7 +311,14 @@ void audio_renderer_render_buffer(audio_renderer_t *renderer, raop_ntp_t *ntp, u
 
     int offset = 0;
     while (offset < time_data_size) {
-        OMX_BUFFERHEADERTYPE *buffer = ilclient_get_input_buffer(renderer->audio_renderer, 100, 1);
+        int64_t audio_delay = ((int64_t) raop_ntp_get_local_time(ntp)) - ((int64_t) pts);
+        logger_log(renderer->logger, LOGGER_DEBUG, "Audio delay is %lld", audio_delay);
+        if (audio_delay > 100000)
+            renderer->first_packet_time = 0;
+
+        OMX_BUFFERHEADERTYPE *buffer = ilclient_get_input_buffer(renderer->audio_renderer, 100, 0);
+        if (!buffer)
+            break;
 
         int chunk_size = MIN(time_data_size - offset, buffer->nAllocLen);
         memcpy(buffer->pBuffer, p_time_data, chunk_size);
